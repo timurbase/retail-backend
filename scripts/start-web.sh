@@ -9,6 +9,9 @@ set -euo pipefail
 
 export DJANGO_SETTINGS_MODULE
 
+echo "→ Collecting static files..."
+uv run python manage.py collectstatic --noinput --clear
+
 echo "→ Running migrations..."
 uv run python manage.py migrate --noinput
 
