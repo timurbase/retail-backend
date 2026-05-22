@@ -1,4 +1,4 @@
-# Explicit Nixpacks config — Python 3.12 + uv via python -m pip.
+# Explicit Nixpacks config — Python 3.12 + uv via python -m pip (v2).
 #
 # Note: nix's `python312` exposes the interpreter as `python` (no bare `pip`
 # binary on PATH). Use `python -m pip` for the bootstrap, then `uv` handles
