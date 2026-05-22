@@ -7,7 +7,7 @@ SQL_INSTALL = """
 CREATE OR REPLACE FUNCTION block_audit_mutation()
 RETURNS trigger AS $$
 BEGIN
-    RAISE EXCEPTION 'audit_entry is append-only (% is forbidden)', TG_OP;
+    RAISE EXCEPTION 'audit_entry is append-only (%% is forbidden)', TG_OP;
 END;
 $$ LANGUAGE plpgsql;
 
