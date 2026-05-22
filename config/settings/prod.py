@@ -20,6 +20,34 @@ from .base import env
 
 DEBUG = False
 
+# ---------- Cache ----------
+# Redis is preferred (DRF throttling needs cross-instance shared state),
+# but Railway deploys sometimes go up without REDIS_URL plumbed in. Falling
+# back to LocMemCache lets the app boot and serve traffic; throttling becomes
+# per-process rather than global, which is acceptable for a single-worker
+# pre-launch deployment but should be fixed before scale-out.
+_redis_url = env("REDIS_URL", default="").strip()
+if _redis_url and not _redis_url.startswith(("redis://localhost", "redis://127.")):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": _redis_url,
+            "OPTIONS": {
+                # Don't take the whole request path down if Redis blips.
+                "IGNORE_EXCEPTIONS": True,
+                "socket_connect_timeout": 2,
+                "socket_timeout": 2,
+            },
+        },
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "retailflow-default",
+        },
+    }
+
 # ---------- Hosts ----------
 # Combine user-set ALLOWED_HOSTS with Railway's auto-provided public domain.
 _user_hosts = env.list("ALLOWED_HOSTS", default=[])
