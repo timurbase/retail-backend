@@ -1,5 +1,8 @@
-# Explicit Nixpacks config — auto-detection failed in image setup.
-# Pin Python 3.12, install uv, use it for deps.
+# Explicit Nixpacks config — Python 3.12 + uv via python -m pip.
+#
+# Note: nix's `python312` exposes the interpreter as `python` (no bare `pip`
+# binary on PATH). Use `python -m pip` for the bootstrap, then `uv` handles
+# everything else.
 
 [phases.setup]
 nixPkgs = [
@@ -13,8 +16,8 @@ aptPkgs = ["libpq-dev", "build-essential"]
 
 [phases.install]
 cmds = [
-  "pip install --upgrade pip",
-  "pip install uv",
+  "python -m ensurepip --upgrade",
+  "python -m pip install --upgrade pip uv",
   "uv sync --no-dev",
 ]
 
