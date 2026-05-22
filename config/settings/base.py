@@ -152,6 +152,12 @@ REST_FRAMEWORK = {
         "otp_send": "3/min",
         "otp_verify": "10/min",
     },
+    # Default DRF behavior wraps DecimalField output in quotes ("12.40") to
+    # preserve precision for arbitrary-precision languages. The TS/JS frontend
+    # calls `.toFixed()` on these fields and crashes. Our largest monetary
+    # values fit inside Number.MAX_SAFE_INTEGER (9e15 ≫ 999_999_999.99 UZS),
+    # so emitting JSON numbers is safe and removes per-field coercion.
+    "COERCE_DECIMAL_TO_STRING": False,
 }
 
 # ---------- JWT ----------
