@@ -1,28 +1,27 @@
-# Explicit Nixpacks config — Python 3.12 + uv via python -m pip (v2).
+# Explicit Nixpacks config — uv direct from nixpkgs, no pip bootstrap.
 #
-# Note: nix's `python312` exposes the interpreter as `python` (no bare `pip`
-# binary on PATH). Use `python -m pip` for the bootstrap, then `uv` handles
-# everything else.
+# Why no pip: Nix's Python lives in /nix/store (read-only). pip refuses
+# to install there (PEP 668 externally-managed-environment). uv installs
+# its own isolated venv in the project, sidestepping the issue entirely.
 
 [phases.setup]
 nixPkgs = [
   "python312",
+  "uv",              # standalone Rust binary, no pip needed
   "gcc",
-  "postgresql_16",  # provides libpq for psycopg
+  "postgresql_16",   # provides libpq for psycopg
   "openssl",
   "zlib",
 ]
 aptPkgs = ["libpq-dev", "build-essential"]
 
 [phases.install]
-cmds = [
-  "python -m ensurepip --upgrade",
-  "python -m pip install --upgrade pip uv",
-  "uv sync --no-dev",
-]
+cmds = ["uv sync --no-dev"]
 
 [phases.build]
 # No Django commands at build — collectstatic + migrate run in start-web.sh.
 
 [variables]
 PYTHONUNBUFFERED = "1"
+# uv creates .venv at /app/.venv; activate it implicitly so `uv run` is fast.
+UV_PROJECT_ENVIRONMENT = "/app/.venv"
