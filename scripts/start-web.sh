@@ -15,6 +15,13 @@ uv run python manage.py collectstatic --noinput --clear
 echo "→ Running migrations..."
 uv run python manage.py migrate --noinput
 
+# Optional one-shot seed. Set SEED_ON_BOOT=1 in Railway, redeploy once,
+# then unset (or leave — seed_demo is idempotent via update_or_create).
+if [ "${SEED_ON_BOOT:-0}" = "1" ]; then
+  echo "→ SEED_ON_BOOT=1 — populating demo data..."
+  uv run python manage.py seed_demo || echo "WARN: seed_demo failed; continuing boot"
+fi
+
 echo "→ Starting gunicorn on :$PORT with $WEB_CONCURRENCY workers..."
 exec uv run gunicorn config.wsgi:application \
   --bind "0.0.0.0:$PORT" \
