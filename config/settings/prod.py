@@ -1,3 +1,17 @@
+"""Production settings — Railway-aware.
+
+Railway provides these env vars automatically:
+- DATABASE_URL (when Postgres plugin attached)
+- RAILWAY_PUBLIC_DOMAIN (your service's public URL)
+- PORT (gunicorn binds to it)
+
+Set these manually in the Railway dashboard:
+- SECRET_KEY, ALLOWED_HOSTS, FRONTEND_ORIGIN, REDIS_URL, OPENAI_API_KEY,
+  ESKIZ_*, R2_*, SOLIQ_*, DIDOX_WEBHOOK_SECRET, SENTRY_DSN
+"""
+
+import os
+
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
@@ -5,8 +19,19 @@ from .base import *  # noqa: F401,F403
 from .base import env
 
 DEBUG = False
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
+# ---------- Hosts ----------
+# Combine user-set ALLOWED_HOSTS with Railway's auto-provided public domain.
+_user_hosts = env.list("ALLOWED_HOSTS", default=[])
+_railway_host = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip()
+ALLOWED_HOSTS = list({*_user_hosts, _railway_host, ".railway.app"} - {""})
+
+# CSRF trusted origins — needs the scheme prefix
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{h}" for h in ALLOWED_HOSTS if not h.startswith(".")
+] + ["https://*.railway.app"]
+
+# ---------- HTTPS ----------
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
@@ -14,27 +39,46 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
-# Cloudflare R2 — S3-compatible
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "bucket_name": env("R2_BUCKET"),
-            "endpoint_url": env("R2_ENDPOINT"),
-            "access_key": env("R2_KEY"),
-            "secret_key": env("R2_SECRET"),
-            "addressing_style": "virtual",
-            "default_acl": "private",
-            "querystring_auth": True,
-            "querystring_expire": 3600,
-        },
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
+# ---------- Static files (WhiteNoise) ----------
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# Sentry
+# ---------- Storage ----------
+# R2 only if configured; else fall back to local (Railway ephemeral disk)
+_r2_bucket = env("R2_BUCKET", default="")
+if _r2_bucket:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "bucket_name": _r2_bucket,
+                "endpoint_url": env("R2_ENDPOINT"),
+                "access_key": env("R2_KEY"),
+                "secret_key": env("R2_SECRET"),
+                "addressing_style": "virtual",
+                "default_acl": "private",
+                "querystring_auth": True,
+                "querystring_expire": 3600,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+# ---------- CORS ----------
+# Allow the deployed frontend; Railway sets RAILWAY_PUBLIC_DOMAIN for itself,
+# but the frontend lives on a different service — set FRONTEND_ORIGIN there.
+_frontend = env("FRONTEND_ORIGIN", default="")
+CORS_ALLOWED_ORIGINS = [o for o in [_frontend] if o]
+
+# ---------- Sentry ----------
 if env("SENTRY_DSN", default=""):
     sentry_sdk.init(
         dsn=env("SENTRY_DSN"),

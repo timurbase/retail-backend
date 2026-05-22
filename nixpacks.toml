@@ -1,0 +1,22 @@
+# Nixpacks build plan — uv-based Python project.
+
+[phases.setup]
+nixPkgs = ["python312", "gcc", "postgresql"]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip uv",
+  "uv sync --frozen --no-dev"
+]
+
+[phases.build]
+cmds = [
+  "uv run python manage.py collectstatic --noinput",
+]
+
+[start]
+cmd = "bash scripts/start-web.sh"
+
+[variables]
+DJANGO_SETTINGS_MODULE = "config.settings.prod"
+PYTHONUNBUFFERED = "1"

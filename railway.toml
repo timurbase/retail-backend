@@ -1,0 +1,18 @@
+# Railway build + deploy config for RetailFlow backend.
+#
+# Provision separately in the Railway dashboard:
+#   - PostgreSQL plugin     -> exposes DATABASE_URL
+#   - Redis plugin          -> set REDIS_URL = ${{Redis.REDIS_URL}}
+#
+# Set DJANGO_SETTINGS_MODULE=config.settings.prod in service variables.
+# All other env vars: see .env.example.
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "bash scripts/start-web.sh"
+healthcheckPath = "/healthz"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

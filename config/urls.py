@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -6,7 +7,14 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+
+def healthz(_request):
+    """Lightweight health check for Railway and load balancers."""
+    return JsonResponse({"status": "ok", "service": "retailflow-backend"})
+
+
 urlpatterns = [
+    path("healthz", healthz, name="healthz"),
     path("admin/", admin.site.urls),
     # OpenAPI schema + docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
