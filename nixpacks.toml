@@ -1,0 +1,25 @@
+# Explicit Nixpacks config — auto-detection failed in image setup.
+# Pin Python 3.12, install uv, use it for deps.
+
+[phases.setup]
+nixPkgs = [
+  "python312",
+  "gcc",
+  "postgresql_16",  # provides libpq for psycopg
+  "openssl",
+  "zlib",
+]
+aptPkgs = ["libpq-dev", "build-essential"]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip",
+  "pip install uv",
+  "uv sync --no-dev",
+]
+
+[phases.build]
+# No Django commands at build — collectstatic + migrate run in start-web.sh.
+
+[variables]
+PYTHONUNBUFFERED = "1"
